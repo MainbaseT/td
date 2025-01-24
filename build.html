@@ -240,6 +240,7 @@
       <option>Alpine</option>
       <option>CentOS 7</option>
       <option>CentOS 8</option>
+      <option>CentOS Stream 9</option>
       <option>Debian 8</option>
       <option>Debian 9</option>
       <option>Debian 10+</option>
@@ -473,6 +474,9 @@ function getTarget(language, os) {
     return 'WebAssembly';
   }
   if (os.includes('Android')) {
+    if (language === 'Dart') {
+      return 'AndroidJson';
+    }
     return 'Android';
   }
   if (os.includes('iOS') || os.includes('tvOS') || os.includes('visionOS') || os.includes('watchOS')) {
@@ -495,6 +499,7 @@ function getTargetName(target) {
     case 'tdjson':
     case 'WebAssembly':
     case 'iOS':
+    case 'AndroidJson':
       return '<a href="https://github.com/tdlib/td#using-json">JSON</a>';
     case 'tdclient':
       return '<a href="https://github.com/tdlib/td#using-cxx">simple and convenient C++11</a>';
@@ -524,9 +529,9 @@ function onOsChanged() {
            'If you want to build it manually, take a look at our <a href="https://github.com/tdlib/td/tree/master/example/web">example</a>.';
     target = '';
   }
-  if (target === 'Android') {
-    text = 'TDLib for Android is available in a prebuilt form and can be downloaded from <a href="https://core.telegram.org/tdlib/tdlib.zip">there</a>.<br>' +
-           'See <a href="https://github.com/tdlib/td/issues/77#issuecomment-640719893">build instructions</a> if you want to build the latest TDLib version or want to build TDLib with different interface.';
+  if (target === 'Android' || target === 'AndroidJson') {
+    text = 'TDLib can be used from ' + language + ' on ' + os + ' through the ' + getTargetName(target) + ' interface.<br>' +
+           'See <a href="https://github.com/tdlib/td/blob/master/example/android">Android example</a> for the example of building TDLib for Android.<br>';
     target = '';
   }
   if (target === 'iOS') {
@@ -844,22 +849,29 @@ function onOptionsChanged() {
         commands.push(sudo + 'apk add ' + packages);
         break;
       case 'CentOS 7':
-      case 'CentOS 8':
         commands.push(sudo + 'yum update -y');
-        var packages = 'gcc-c++ make git zlib-devel openssl-devel php';
-        if (linux_distro === 'CentOS 7') {
-          commands.push(sudo + 'yum install -y centos-release-scl-rh epel-release');
-          commands.push(sudo + 'yum install -y devtoolset-9-gcc devtoolset-9-gcc-c++');
-          cmake = 'cmake3';
-          packages += ' gperf';
-        } else {
-          commands.push(sudo + 'dnf --enablerepo=powertools install gperf');
-        }
-        packages += ' ' + cmake;
+        commands.push(sudo + 'yum install -y centos-release-scl-rh epel-release');
+        commands.push(sudo + 'yum install -y devtoolset-9-gcc devtoolset-9-gcc-c++');
+        var packages = 'gcc-c++ make git zlib-devel openssl-devel php gperf cmake3';
         if (target === 'JNI') {
           packages += ' java-11-openjdk-devel';
         }
+        cmake = 'cmake3';
         commands.push(sudo + 'yum install -y ' + packages);
+        break;
+      case 'CentOS 8':
+      case 'CentOS Stream 9':
+        commands.push(sudo + 'dnf update -y');
+        if (linux_distro === 'CentOS 8') {
+          commands.push(sudo + 'dnf --enablerepo=powertools install -y gperf');
+        } else {
+          commands.push(sudo + 'dnf --enablerepo=crb install -y gperf');
+        }
+        var packages = 'gcc-c++ make git zlib-devel openssl-devel php cmake';
+        if (target === 'JNI') {
+          packages += ' java-11-openjdk-devel';
+        }
+        commands.push(sudo + 'dnf install -y ' + packages);
         break;
       case 'Debian 8':
       case 'Debian 9':
@@ -949,7 +961,7 @@ function onOptionsChanged() {
   if (use_vcpkg) {
     commands.push('git clone https://github.com/Microsoft/vcpkg.git');
     commands.push('cd vcpkg');
-    commands.push('git checkout cd5e746ec203c8c3c61647e0886a8df8c1e78e41');
+    commands.push('git checkout 07b30b49e5136a36100a2ce644476e60d7f3ddc1');
     commands.push(local + 'bootstrap-vcpkg.bat');
     if (target === 'C++/CX') {
       commands.push(local + 'vcpkg.exe install gperf:x86-windows openssl:arm-uwp openssl:arm64-uwp openssl:x64-uwp openssl:x86-uwp zlib:arm-uwp zlib:arm64-uwp zlib:x64-uwp zlib:x86-uwp');
